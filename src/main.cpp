@@ -23,6 +23,14 @@ DevRelayWithTimer relayFan(PIN_RELAY1, true);
 DevRelayWithTimer relayPump(PIN_RELAY2, true);
 DevRelayWithTimer relayHeater(PIN_RELAY3, true);
 
+// Isolated input pin definitions (from HardwareESP32Config.md)
+const uint8_t PIN_ISO1 = 33; // ISO1 = TankLevelSensor1 (แจ้งสถานะน้ำแห้ง) Active Low
+const uint8_t PIN_ISO2 = 27; // ISO2 = TankLevelSensor2 (แจ้งสถานะน้ำล้น) Active Low
+
+// Instantiate isolated inputs (Active Low)
+DevIsoInput iso1(PIN_ISO1, false);
+DevIsoInput iso2(PIN_ISO2, false);
+
 // Callback handlers
 void onSw1Click() {
   Serial.println("SW1: Enter/Select");
@@ -34,6 +42,23 @@ void onSw2Click() {
 
 void onSw3Click() {
   Serial.println("SW3: Up");
+}
+
+// ISO callbacks
+void onIso1Active() {
+  Serial.println("ISO1: TankLevelSensor1 - DRY (active)");
+}
+
+void onIso1Inactive() {
+  Serial.println("ISO1: TankLevelSensor1 - OK (inactive)");
+}
+
+void onIso2Active() {
+  Serial.println("ISO2: TankLevelSensor2 - OVERFLOW (active)");
+}
+
+void onIso2Inactive() {
+  Serial.println("ISO2: TankLevelSensor2 - OK (inactive)");
 }
 
 // Relay control helpers
@@ -70,6 +95,16 @@ void setup() {
   sw1.onClick(onSw1Click);
   sw2.onClick(onSw2Click);
   sw3.onClick(onSw3Click);
+
+  // Initialize isolated inputs (ISO) - Tank level sensors (Active Low)
+  iso1.begin();
+  iso2.begin();
+
+  // Register ISO callbacks
+  iso1.onActive(onIso1Active);
+  iso1.onInactive(onIso1Inactive);
+  iso2.onActive(onIso2Active);
+  iso2.onInactive(onIso2Inactive);
 }
 
 void loop() {
@@ -77,6 +112,10 @@ void loop() {
   sw1.update();
   sw2.update();
   sw3.update();
+
+  // Poll isolated inputs (tank level sensors)
+  iso1.update();
+  iso2.update();
 
   // Serial control: press keys to toggle relays
   if (Serial.available()) {
